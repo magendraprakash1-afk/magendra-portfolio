@@ -1,9 +1,8 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "rewrites": [
-    { "source": "/admin", "destination": "/admin/index.html" },
-    { "source": "/admin/", "destination": "/admin/index.html" }
+  "redirects": [
+    { "source": "/admin", "destination": "/admin/", "statusCode": 301 }
   ],
   "headers": [
     {
