@@ -1,0 +1,578 @@
+/* ═══════════════════════════════════════════════════════════════
+   PUBLIC PORTFOLIO — Main Application
+   Reads from published data store and renders all sections
+   ═══════════════════════════════════════════════════════════════ */
+
+(function() {
+  const store = window.PortfolioStore;
+  let data = store.getPublishedData();
+  let settings = store.getSettings();
+
+  /* ── Initialize ───────────────────────────────────────────── */
+  function init() {
+    applySettings();
+    renderAll();
+    setupNavigation();
+    setupTypingEffect();
+    setupScrollReveal();
+    setupContactForm();
+    setupEventListeners();
+    lucide.createIcons();
+  }
+
+  /* ── Apply Settings ───────────────────────────────────────── */
+  function applySettings() {
+    const root = document.documentElement;
+    root.style.setProperty('--accent-primary', settings.primaryColor || '#00ff88');
+    root.style.setProperty('--accent-secondary', settings.secondaryColor || '#00d4ff');
+    root.style.setProperty('--glass-blur', (settings.blurIntensity || 20) + 'px');
+    root.style.setProperty('--border-radius', (settings.borderRadius || 16) + 'px');
+    root.style.setProperty('--section-spacing', (settings.sectionSpacing || 100) + 'px');
+    
+    if (settings.fontFamily) {
+      root.style.setProperty('--font-primary', `'${settings.fontFamily}', sans-serif`);
+    }
+  }
+
+  /* ── Render All Sections ──────────────────────────────────── */
+  function renderAll() {
+    renderProfile();
+    renderAbout();
+    renderSkills();
+    renderProjects();
+    renderTimeline();
+    renderCertificates();
+    renderAchievements();
+    renderContact();
+    renderSocial();
+    renderStatus();
+    updateSEO();
+  }
+
+  /* ── Profile / Hero ───────────────────────────────────────── */
+  function renderProfile() {
+    const p = data.profile;
+    setText('heroName', p.name);
+    setText('heroTitle', p.title);
+    setText('heroCompany', p.company);
+    
+    // Profile image
+    const imgEl = document.getElementById('heroProfileImg');
+    if (p.profileImage) {
+      imgEl.innerHTML = `<img src="${p.profileImage}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;">`;
+    }
+    
+    // Resume buttons
+    const resumeBtn = document.getElementById('downloadResumeBtn');
+    const resumeBtnAlt = document.getElementById('downloadResumeBtnAlt');
+    const viewBtn = document.getElementById('viewResumeBtn');
+    if (p.resumeUrl) {
+      resumeBtn.href = p.resumeUrl;
+      resumeBtn.setAttribute('download', '');
+      if (resumeBtnAlt) { resumeBtnAlt.href = p.resumeUrl; resumeBtnAlt.setAttribute('download', ''); }
+      if (viewBtn) { viewBtn.href = p.resumeUrl; viewBtn.setAttribute('target', '_blank'); }
+    }
+
+    // Floating cards
+    const heroCards = p.heroCards || ['AI Founder', 'Developer', 'Innovation', 'Projects'];
+    const cardIcons = ['brain', 'code-2', 'lightbulb', 'rocket'];
+    document.querySelectorAll('.floating-card').forEach((card, i) => {
+      if (heroCards[i]) {
+        card.querySelector('span').textContent = heroCards[i];
+      }
+    });
+  }
+
+  /* ── About ────────────────────────────────────────────────── */
+  function renderAbout() {
+    const a = data.about;
+    setText('aboutIntro', a.introduction);
+    setText('aboutEducation', data.profile.education);
+    setText('aboutExperience', a.experience);
+    setText('aboutInterests', a.interests);
+    setText('aboutGoal', a.careerGoals);
+
+    // Stats
+    const statsEl = document.getElementById('aboutStats');
+    const iconMap = { folder: 'folder-open', code: 'code-2', award: 'award', clock: 'clock' };
+    statsEl.innerHTML = (a.stats || []).map(s => `
+      <div class="stat-card reveal">
+        <i data-lucide="${iconMap[s.icon] || s.icon}" class="stat-icon"></i>
+        <div class="stat-number" data-count="${s.value}">0</div>
+        <div class="stat-label">${s.label}</div>
+      </div>
+    `).join('');
+  }
+
+  /* ── Skills ───────────────────────────────────────────────── */
+  function renderSkills(filter = 'all') {
+    const grid = document.getElementById('skillsGrid');
+    const filtered = filter === 'all' 
+      ? data.skills 
+      : data.skills.filter(s => s.category === filter);
+
+    grid.innerHTML = filtered.map(s => `
+      <div class="skill-card reveal" data-category="${s.category}">
+        <span class="skill-icon">${s.icon || '⚡'}</span>
+        <div class="skill-name">${s.name}</div>
+        <div class="skill-bar">
+          <div class="skill-bar-fill" data-width="${s.percentage}"></div>
+        </div>
+        <div class="skill-percentage">${s.percentage}%</div>
+      </div>
+    `).join('');
+
+    // Animate skill bars after render
+    requestAnimationFrame(() => {
+      grid.querySelectorAll('.skill-bar-fill').forEach(bar => {
+        bar.style.width = bar.dataset.width + '%';
+      });
+    });
+
+    lucide.createIcons();
+    setupScrollReveal();
+  }
+
+  /* ── Projects ─────────────────────────────────────────────── */
+  function renderProjects(filter = 'all') {
+    const grid = document.getElementById('projectsGrid');
+    const filtered = filter === 'all'
+      ? data.projects
+      : data.projects.filter(p => p.category === filter);
+
+    grid.innerHTML = filtered.map(p => `
+      <div class="project-card reveal" data-category="${p.category}">
+        <div class="project-image">
+          ${p.image 
+            ? `<img src="${p.image}" alt="${p.title}">` 
+            : `<div class="project-image-placeholder"><i data-lucide="image"></i></div>`
+          }
+          <span class="project-status">${p.status || 'Active'}</span>
+        </div>
+        <div class="project-body">
+          <span class="project-category">${p.category}</span>
+          <h3 class="project-title">${p.title}</h3>
+          <p class="project-desc">${p.description}</p>
+          <div class="project-tech">
+            ${(p.technologies || []).map(t => `<span class="tech-tag">${t}</span>`).join('')}
+          </div>
+          <div class="project-links">
+            ${p.githubUrl ? `<a href="${p.githubUrl}" target="_blank" rel="noopener" class="project-link"><i data-lucide="github"></i> Code</a>` : ''}
+            ${p.liveUrl && p.liveUrl !== '#' ? `<a href="${p.liveUrl}" target="_blank" rel="noopener" class="project-link"><i data-lucide="external-link"></i> Demo</a>` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    lucide.createIcons();
+    setupScrollReveal();
+  }
+
+  /* ── Timeline ─────────────────────────────────────────────── */
+  function renderTimeline() {
+    const expEl = document.getElementById('experienceTimeline');
+    const eduEl = document.getElementById('educationTimeline');
+
+    expEl.innerHTML = (data.experience || []).map(e => `
+      <div class="timeline-item reveal">
+        <span class="timeline-date">${e.startDate} — ${e.endDate}</span>
+        <h4 class="timeline-org">${e.organization}</h4>
+        <p class="timeline-pos">${e.position}</p>
+        <p class="timeline-desc">${e.description}</p>
+        ${e.technologies ? `
+          <div class="timeline-techs">
+            ${e.technologies.map(t => `<span class="tech-tag">${t}</span>`).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `).join('');
+
+    eduEl.innerHTML = (data.education || []).map(e => `
+      <div class="timeline-item reveal">
+        <span class="timeline-date">${e.startYear} — ${e.endYear}</span>
+        <h4 class="timeline-org">${e.institution}</h4>
+        <p class="timeline-pos">${e.degree} — ${e.department}</p>
+        <p class="timeline-desc">${e.description}</p>
+        ${e.grade ? `<p class="timeline-desc" style="margin-top:6px;color:var(--accent-secondary)">Grade: ${e.grade}</p>` : ''}
+      </div>
+    `).join('');
+  }
+
+  /* ── Certificates ─────────────────────────────────────────── */
+  function renderCertificates() {
+    const grid = document.getElementById('certificatesGrid');
+    grid.innerHTML = (data.certificates || []).map(c => `
+      <div class="cert-card reveal" data-id="${c.id}">
+        <i data-lucide="award" class="cert-icon"></i>
+        <h3 class="cert-name">${c.name}</h3>
+        <p class="cert-org">
+          <i data-lucide="building-2" style="width:14px;height:14px;"></i>
+          ${c.organization}
+        </p>
+        <p class="cert-date">${c.date}</p>
+        ${c.credentialUrl ? `
+          <a href="${c.credentialUrl}" target="_blank" rel="noopener" class="cert-view">
+            View Credential <i data-lucide="external-link"></i>
+          </a>
+        ` : '<span class="cert-view">View Details <i data-lucide="eye"></i></span>'}
+      </div>
+    `).join('');
+
+    // Click to open modal
+    grid.querySelectorAll('.cert-card').forEach(card => {
+      card.addEventListener('click', () => openCertModal(card.dataset.id));
+    });
+  }
+
+  function openCertModal(id) {
+    const cert = data.certificates.find(c => c.id == id);
+    if (!cert) return;
+    
+    const modal = document.getElementById('certModal');
+    const body = document.getElementById('certModalBody');
+    
+    body.innerHTML = `
+      ${cert.image ? `<img src="${cert.image}" alt="${cert.name}" style="width:100%;border-radius:12px;margin-bottom:20px;">` : ''}
+      <h3 style="font-size:1.3rem;margin-bottom:12px;">${cert.name}</h3>
+      <p style="color:var(--accent-secondary);margin-bottom:8px;">${cert.organization}</p>
+      <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:8px;">Date: ${cert.date}</p>
+      ${cert.credentialId ? `<p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:16px;">Credential ID: ${cert.credentialId}</p>` : ''}
+      ${cert.credentialUrl ? `<a href="${cert.credentialUrl}" target="_blank" rel="noopener" class="btn btn-primary" style="margin-top:12px;"><i data-lucide="external-link" class="btn-icon"></i> Verify Credential</a>` : ''}
+    `;
+    
+    modal.classList.add('active');
+    lucide.createIcons();
+  }
+
+  /* ── Achievements ─────────────────────────────────────────── */
+  function renderAchievements() {
+    const grid = document.getElementById('achievementsGrid');
+    grid.innerHTML = (data.achievements || []).map(a => `
+      <div class="achievement-card reveal">
+        <span class="achievement-icon">${a.icon || '🏆'}</span>
+        <h3 class="achievement-title">${a.title}</h3>
+        <p class="achievement-desc">${a.description}</p>
+        <div class="achievement-meta">
+          <span class="achievement-category">${a.category}</span>
+          <span class="achievement-date">${a.date}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  /* ── Contact ──────────────────────────────────────────────── */
+  function renderContact() {
+    setText('contactEmail', data.profile.email);
+    setText('contactPhone', data.profile.phone);
+    setText('contactLocation', data.profile.location);
+  }
+
+  /* ── Social Links ─────────────────────────────────────────── */
+  function renderSocial() {
+    const socials = data.socialLinks;
+    const iconMap = {
+      github: 'github',
+      linkedin: 'linkedin',
+      instagram: 'instagram',
+      youtube: 'youtube',
+      twitter: 'twitter',
+      facebook: 'facebook',
+      website: 'globe'
+    };
+
+    let html = '';
+    for (const [key, url] of Object.entries(socials)) {
+      if (key === 'custom') continue;
+      if (url) {
+        html += `<a href="${url}" target="_blank" rel="noopener" class="social-link" aria-label="${key}"><i data-lucide="${iconMap[key] || 'link'}"></i></a>`;
+      }
+    }
+
+    // Custom socials
+    if (socials.custom) {
+      socials.custom.forEach(c => {
+        html += `<a href="${c.url}" target="_blank" rel="noopener" class="social-link" aria-label="${c.name}"><i data-lucide="link"></i></a>`;
+      });
+    }
+
+    const socialEl = document.getElementById('socialLinks');
+    const footerEl = document.getElementById('footerSocial');
+    if (socialEl) socialEl.innerHTML = html;
+    if (footerEl) footerEl.innerHTML = html;
+  }
+
+  /* ── Status Badge ─────────────────────────────────────────── */
+  function renderStatus() {
+    const badge = document.getElementById('statusBadge');
+    if (data.profile.statusActive) {
+      badge.style.display = 'flex';
+      badge.querySelector('.status-text').textContent = data.profile.status || 'Available for Projects';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  /* ── SEO ───────────────────────────────────────────────────── */
+  function updateSEO() {
+    const seo = data.seo;
+    if (seo.title) document.title = seo.title;
+    
+    const desc = document.querySelector('meta[name="description"]');
+    if (desc && seo.description) desc.setAttribute('content', seo.description);
+    
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) ogTitle.setAttribute('content', seo.title || data.profile.name);
+    
+    const ogDesc = document.querySelector('meta[property="og:description"]');
+    if (ogDesc) ogDesc.setAttribute('content', seo.description || '');
+  }
+
+  /* ── Typing Effect ────────────────────────────────────────── */
+  function setupTypingEffect() {
+    const el = document.getElementById('typingText');
+    const texts = data.profile.typingTexts || ['AI Builder', 'Full Stack Developer', 'Entrepreneur', 'Tech Innovator'];
+    let textIndex = 0, charIndex = 0, isDeleting = false;
+
+    function type() {
+      const current = texts[textIndex];
+      if (isDeleting) {
+        el.textContent = current.substring(0, charIndex - 1);
+        charIndex--;
+      } else {
+        el.textContent = current.substring(0, charIndex + 1);
+        charIndex++;
+      }
+
+      let speed = isDeleting ? 50 : 100;
+
+      if (!isDeleting && charIndex === current.length) {
+        speed = 2000;
+        isDeleting = true;
+      } else if (isDeleting && charIndex === 0) {
+        isDeleting = false;
+        textIndex = (textIndex + 1) % texts.length;
+        speed = 500;
+      }
+
+      setTimeout(type, speed);
+    }
+
+    type();
+  }
+
+  /* ── Navigation ───────────────────────────────────────────── */
+  function setupNavigation() {
+    const navbar = document.getElementById('navbar');
+    const mobileBtn = document.getElementById('mobileMenuBtn');
+    const navLinks = document.getElementById('navLinks');
+    const themeToggle = document.getElementById('themeToggle');
+    const backToTop = document.getElementById('backToTop');
+
+    // Scroll effects
+    window.addEventListener('scroll', () => {
+      // Navbar scroll
+      navbar.classList.toggle('scrolled', window.scrollY > 50);
+
+      // Active section
+      const sections = document.querySelectorAll('.section, .hero');
+      let current = '';
+      sections.forEach(section => {
+        const rect = section.getBoundingClientRect();
+        if (rect.top <= 200) current = section.id;
+      });
+      
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.toggle('active', link.dataset.section === current);
+      });
+    });
+
+    // Mobile menu
+    mobileBtn.addEventListener('click', () => {
+      mobileBtn.classList.toggle('active');
+      navLinks.classList.toggle('open');
+    });
+
+    // Close mobile menu on link click
+    navLinks.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        mobileBtn.classList.remove('active');
+        navLinks.classList.remove('open');
+      });
+    });
+
+    // Theme toggle
+    themeToggle.addEventListener('click', () => {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('portfolio-theme', next);
+      lucide.createIcons();
+    });
+
+    // Restore theme
+    const savedTheme = localStorage.getItem('portfolio-theme');
+    if (savedTheme) {
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    }
+
+    // Back to top
+    if (backToTop) {
+      backToTop.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+
+    // Footer year
+    const yearEl = document.getElementById('footerYear');
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+    // Certificate modal close
+    const certModalClose = document.getElementById('certModalClose');
+    const certModal = document.getElementById('certModal');
+    if (certModalClose) {
+      certModalClose.addEventListener('click', () => certModal.classList.remove('active'));
+    }
+    certModal.addEventListener('click', (e) => {
+      if (e.target === certModal) certModal.classList.remove('active');
+    });
+
+    // Skills filter
+    document.getElementById('skillsFilter').addEventListener('click', (e) => {
+      if (e.target.classList.contains('filter-btn')) {
+        document.querySelectorAll('#skillsFilter .filter-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        renderSkills(e.target.dataset.filter);
+      }
+    });
+
+    // Projects filter
+    document.getElementById('projectsFilter').addEventListener('click', (e) => {
+      if (e.target.classList.contains('filter-btn')) {
+        document.querySelectorAll('#projectsFilter .filter-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        renderProjects(e.target.dataset.filter);
+      }
+    });
+  }
+
+  /* ── Scroll Reveal ────────────────────────────────────────── */
+  function setupScrollReveal() {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          
+          // Animate stat counters
+          if (entry.target.classList.contains('stat-card')) {
+            animateCounter(entry.target.querySelector('.stat-number'));
+          }
+          
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  }
+
+  function animateCounter(el) {
+    if (!el || el.dataset.animated) return;
+    el.dataset.animated = 'true';
+    const target = parseInt(el.dataset.count) || 0;
+    const duration = 1500;
+    const start = performance.now();
+
+    function update(now) {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+      el.textContent = Math.round(target * eased);
+      if (progress < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+  }
+
+  /* ── Contact Form ─────────────────────────────────────────── */
+  function setupContactForm() {
+    const form = document.getElementById('contactForm');
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const name = document.getElementById('contactName').value.trim();
+      const email = document.getElementById('contactEmailInput').value.trim();
+      const message = document.getElementById('contactMessage').value.trim();
+
+      if (!name || !email || !message) {
+        showToast('Please fill in all fields', 'error');
+        return;
+      }
+
+      // Save message
+      store.addMessage({ name, email, message });
+      form.reset();
+      showToast('Message sent successfully! 🎉', 'success');
+    });
+  }
+
+  /* ── Event Listeners ──────────────────────────────────────── */
+  function setupEventListeners() {
+    // Listen for data updates from admin in the same window
+    window.addEventListener('portfolio-updated', (e) => {
+      data = e.detail;
+      renderAll();
+      lucide.createIcons();
+    });
+
+    // Listen for cross-tab storage updates from the admin dashboard
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'portfolio_data') {
+        data = store.getPublishedData();
+        renderAll();
+        lucide.createIcons();
+      }
+      if (e.key === 'portfolio_settings') {
+        settings = store.getSettings();
+        applySettings();
+      }
+    });
+
+    window.addEventListener('settings-updated', (e) => {
+      settings = e.detail;
+      applySettings();
+    });
+
+    // Fallback poller for browsers or tabs without storage events
+    setInterval(() => {
+      const newData = store.getPublishedData();
+      if (JSON.stringify(newData) !== JSON.stringify(data)) {
+        data = newData;
+        renderAll();
+        lucide.createIcons();
+      }
+    }, 3000);
+  }
+
+  /* ── Utilities ────────────────────────────────────────────── */
+  function setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text || '';
+  }
+
+  function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    const iconMap = { success: 'check-circle', error: 'alert-circle', info: 'info' };
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<i data-lucide="${iconMap[type]}" class="toast-icon"></i>${message}`;
+    container.appendChild(toast);
+    lucide.createIcons();
+    
+    setTimeout(() => {
+      toast.classList.add('removing');
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+
+  /* ── Start ────────────────────────────────────────────────── */
+  document.addEventListener('DOMContentLoaded', init);
+})();

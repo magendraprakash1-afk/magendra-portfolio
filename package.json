@@ -1,0 +1,10 @@
+{
+  "name": "magendra-portfolio",
+  "version": "1.0.0",
+  "description": "Magendraprakash S — Portfolio & Admin Editor",
+  "private": true,
+  "scripts": {
+    "build": "node build.js",
+    "preview": "npx -y serve dist"
+  }
+}

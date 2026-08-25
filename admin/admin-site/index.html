@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portfolio Editor — Admin Dashboard</title>
+  <meta name="robots" content="noindex, nofollow">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <!-- Supabase JS Client (Auth + DB) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  
+  <link rel="stylesheet" href="admin-styles.css">
+</head>
+<body>
+
+  <!-- ═══════ LOADING SCREEN ═══════ -->
+  <div class="login-screen" id="loadingScreen" style="display:flex;">
+    <div class="login-particles" id="loadingParticles"></div>
+    <div class="login-card glass-card" style="text-align:center;">
+      <div class="login-logo">
+        <span class="logo-accent">M</span>AGENDRA<span class="logo-dot">.</span>
+      </div>
+      <div class="auth-loading-spinner"></div>
+      <p style="color:var(--text-muted);margin-top:12px;font-size:0.9rem;">Checking authentication...</p>
+    </div>
+  </div>
+
+  <!-- ═══════ LOGIN SCREEN ═══════ -->
+  <div class="login-screen" id="loginScreen" style="display:none;">
+    <div class="login-particles" id="loginParticles"></div>
+    <div class="login-card glass-card">
+      <div class="login-logo">
+        <span class="logo-accent">M</span>AGENDRA<span class="logo-dot">.</span>
+      </div>
+      <h2 class="login-title">Admin Dashboard</h2>
+      <p class="login-subtitle">Sign in to manage your portfolio</p>
+      
+      <form id="loginForm" class="login-form">
+        <div class="form-group">
+          <label for="loginEmail">
+            <i data-lucide="mail" class="form-icon"></i> Email
+          </label>
+          <input type="email" id="loginEmail" placeholder="your-email@example.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">
+            <i data-lucide="lock" class="form-icon"></i> Password
+          </label>
+          <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <div class="login-error" id="loginError"></div>
+        <button type="submit" class="btn btn-primary btn-full" id="loginSubmitBtn">
+          <i data-lucide="log-in" class="btn-icon"></i> Sign In
+        </button>
+        <p class="login-hint" style="font-size:0.75rem;color:var(--text-muted);margin-top:12px;">
+          <i data-lucide="shield" style="width:14px;height:14px;vertical-align:-2px;"></i>
+          Secured with Supabase Authentication
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══════ DASHBOARD ═══════ -->
+  <div class="dashboard" id="dashboard" style="display:none;">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-logo"><span class="logo-accent">M</span>AGENDRA<span class="logo-dot">.</span></span>
+        <span class="sidebar-badge">Editor</span>
+      </div>
+      
+      <nav class="sidebar-nav" id="sidebarNav">
+        <div class="nav-section-label">Content</div>
+        <a href="#" class="sidebar-link active" data-page="dashboard">
+          <i data-lucide="layout-dashboard"></i> Dashboard
+        </a>
+        <a href="#" class="sidebar-link" data-page="profile">
+          <i data-lucide="user"></i> Profile
+        </a>
+        <a href="#" class="sidebar-link" data-page="about">
+          <i data-lucide="info"></i> About
+        </a>
+        <a href="#" class="sidebar-link" data-page="skills">
+          <i data-lucide="code-2"></i> Skills
+        </a>
+        <a href="#" class="sidebar-link" data-page="projects">
+          <i data-lucide="folder-open"></i> Projects
+        </a>
+        <a href="#" class="sidebar-link" data-page="experience">
+          <i data-lucide="briefcase"></i> Experience
+        </a>
+        <a href="#" class="sidebar-link" data-page="education">
+          <i data-lucide="graduation-cap"></i> Education
+        </a>
+        <a href="#" class="sidebar-link" data-page="certificates">
+          <i data-lucide="award"></i> Certificates
+        </a>
+        <a href="#" class="sidebar-link" data-page="achievements">
+          <i data-lucide="trophy"></i> Achievements
+        </a>
+        
+        <div class="nav-section-label">Management</div>
+        <a href="#" class="sidebar-link" data-page="resume">
+          <i data-lucide="file-text"></i> Resume
+        </a>
+        <a href="#" class="sidebar-link" data-page="social">
+          <i data-lucide="share-2"></i> Social Links
+        </a>
+        <a href="#" class="sidebar-link" data-page="messages">
+          <i data-lucide="inbox"></i> Messages
+          <span class="sidebar-badge-count" id="msgCount">0</span>
+        </a>
+        
+        <div class="nav-section-label">Settings</div>
+        <a href="#" class="sidebar-link" data-page="seo">
+          <i data-lucide="search"></i> SEO
+        </a>
+        <a href="#" class="sidebar-link" data-page="design">
+          <i data-lucide="palette"></i> Design Studio
+        </a>
+        <a href="#" class="sidebar-link" data-page="settings">
+          <i data-lucide="settings"></i> Settings
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="sidebar-link logout-btn" id="logoutBtn">
+          <i data-lucide="log-out"></i> Logout
+        </button>
+      </div>
+    </aside>
+
+    <!-- Mobile Sidebar Toggle -->
+    <button class="sidebar-toggle" id="sidebarToggle">
+      <i data-lucide="menu"></i>
+    </button>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+      
+      <!-- Top Bar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <h1 class="topbar-title" id="pageTitle">Dashboard</h1>
+        </div>
+        <div class="topbar-right">
+          <div class="draft-indicator" id="draftIndicator" style="display:none;">
+            <span class="draft-dot"></span> Unsaved Changes
+          </div>
+          <button class="btn btn-secondary btn-sm" id="previewBtn">
+            <i data-lucide="eye" class="btn-icon"></i> Preview
+          </button>
+          <button class="btn btn-primary btn-sm" id="publishBtn">
+            <i data-lucide="upload" class="btn-icon"></i> Publish
+          </button>
+        </div>
+      </header>
+
+      <!-- Page Content Container -->
+      <div class="page-content" id="pageContent">
+        <!-- Pages rendered dynamically -->
+      </div>
+
+    </main>
+
+    <!-- Preview Panel -->
+    <div class="preview-panel" id="previewPanel" style="display:none;">
+      <div class="preview-header">
+        <h3><i data-lucide="eye" style="width:18px;height:18px;"></i> Live Preview</h3>
+        <button class="preview-close" id="previewClose">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <iframe id="previewFrame" src="../public-site/index.html"></iframe>
+    </div>
+  </div>
+
+  <!-- ═══════ TOAST CONTAINER ═══════ -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="../shared/data-store.js"></script>
+  <script src="admin-app.js"></script>
+</body>
+</html>

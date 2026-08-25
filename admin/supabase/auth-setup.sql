@@ -1,0 +1,77 @@
+-- ═══════════════════════════════════════════════════════════════
+-- SUPABASE AUTH SETUP — Create Admin User
+-- Run this AFTER running schema.sql
+-- ═══════════════════════════════════════════════════════════════
+--
+-- ⚠️  IMPORTANT: You cannot create auth users via SQL directly.
+--     Instead, use one of these methods:
+--
+-- METHOD 1: Supabase Dashboard (Recommended)
+-- ─────────────────────────────────────────────
+-- 1. Go to your Supabase project dashboard
+-- 2. Navigate to Authentication → Users
+-- 3. Click "Add User" → "Create New User"
+-- 4. Enter your admin email and a STRONG password
+-- 5. Check "Auto Confirm User" so no email verification is needed
+-- 6. Click "Create User"
+--
+-- METHOD 2: Supabase Auth API (via curl or Postman)
+-- ──────────────────────────────────────────────────
+-- Use the Supabase Admin API to create the user:
+--
+--   curl -X POST 'https://pmnqgrrevcmzqebowjtq.supabase.co/auth/v1/admin/users' \
+--     -H "apikey: YOUR_SERVICE_ROLE_KEY" \
+--     -H "Authorization: Bearer YOUR_SERVICE_ROLE_KEY" \
+--     -H "Content-Type: application/json" \
+--     -d '{
+--       "email": "admin@zonerox.tech",
+--       "password": "YOUR_STRONG_PASSWORD_HERE",
+--       "email_confirm": true,
+--       "user_metadata": {
+--         "name": "MAGENDRAPRAKASH S",
+--         "role": "admin"
+--       }
+--     }'
+--
+-- ⚠️  Replace YOUR_SERVICE_ROLE_KEY with your Supabase service role key
+--     (found in Settings → API → service_role key)
+--
+-- ⚠️  Replace YOUR_STRONG_PASSWORD_HERE with a real strong password
+--     (min 12 chars, mix of upper/lower/numbers/symbols)
+--
+-- METHOD 3: Supabase JS (Node.js script)
+-- ───────────────────────────────────────
+-- const { createClient } = require('@supabase/supabase-js');
+-- const supabase = createClient(
+--   'https://pmnqgrrevcmzqebowjtq.supabase.co',
+--   'YOUR_SERVICE_ROLE_KEY'  // Use service_role key, NOT anon key
+-- );
+--
+-- const { data, error } = await supabase.auth.admin.createUser({
+--   email: 'admin@zonerox.tech',
+--   password: 'YOUR_STRONG_PASSWORD_HERE',
+--   email_confirm: true,
+--   user_metadata: { name: 'MAGENDRAPRAKASH S', role: 'admin' }
+-- });
+--
+-- ═══════════════════════════════════════════════════════════════
+-- SECURITY NOTES
+-- ═══════════════════════════════════════════════════════════════
+--
+-- 1. NEVER use "admin123" or any simple password in production
+-- 2. Use a password manager to generate strong passwords
+-- 3. The anon key is safe to expose (it respects RLS policies)
+-- 4. NEVER expose your service_role key in client-side code
+-- 5. Consider enabling MFA (multi-factor auth) for extra security
+-- 6. Supabase handles JWT tokens, session refresh, and password
+--    hashing automatically — no need to manage these yourself
+--
+-- ═══════════════════════════════════════════════════════════════
+-- OPTIONAL: Restrict sign-ups to prevent unauthorized accounts
+-- ═══════════════════════════════════════════════════════════════
+--
+-- In your Supabase Dashboard:
+-- 1. Go to Authentication → Settings → Auth Providers
+-- 2. Under "Email", DISABLE "Enable Sign Up" 
+--    (this prevents anyone from creating new accounts)
+-- 3. This way, only you (via Dashboard or Admin API) can create users
