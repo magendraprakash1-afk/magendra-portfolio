@@ -9,7 +9,26 @@
   let settings = store.getSettings();
 
   /* ── Initialize ───────────────────────────────────────────── */
-  function init() {
+  async function init() {
+    // Try to load data from Supabase (permanent storage)
+    if (window.SupabaseData) {
+      try {
+        const sbResult = await window.SupabaseData.fetchPortfolioFromSupabase();
+        if (sbResult && sbResult.data) {
+          data = sbResult.data;
+          settings = sbResult.settings || settings;
+          // Also update localStorage so cross-tab polling works
+          store.savePublishedData(data);
+          store.saveSettings(settings);
+          console.log('✅ Portfolio loaded from Supabase');
+        } else {
+          console.log('ℹ️ No data in Supabase, using local defaults');
+        }
+      } catch (err) {
+        console.warn('⚠️ Supabase fetch failed, using local defaults:', err);
+      }
+    }
+
     applySettings();
     renderAll();
     setupNavigation();
@@ -495,7 +514,7 @@
   /* ── Contact Form ─────────────────────────────────────────── */
   function setupContactForm() {
     const form = document.getElementById('contactForm');
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       
       const name = document.getElementById('contactName').value.trim();
@@ -507,8 +526,19 @@
         return;
       }
 
-      // Save message
+      // Save message to Supabase (permanent) and localStorage (fallback)
       store.addMessage({ name, email, message });
+      
+      if (window.SupabaseData) {
+        const profileId = data._profileId || null;
+        const result = await window.SupabaseData.saveContactMessage(profileId, name, email, message);
+        if (result.success) {
+          console.log('✅ Message saved to Supabase');
+        } else {
+          console.warn('⚠️ Supabase message save failed:', result.error);
+        }
+      }
+
       form.reset();
       showToast('Message sent successfully! 🎉', 'success');
     });

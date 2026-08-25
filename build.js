@@ -136,8 +136,12 @@ if (fs.existsSync(publicIndexPath)) {
     'src="../shared/data-store.js"',
     'src="shared/data-store.js"'
   );
+  publicHtml = publicHtml.replace(
+    'src="../shared/supabase-data.js"',
+    'src="shared/supabase-data.js"'
+  );
   fs.writeFileSync(publicIndexPath, publicHtml);
-  console.log('  ✓ Fixed shared data-store path in index.html');
+  console.log('  ✓ Fixed shared data-store and supabase-data paths in index.html');
 }
 
 console.log('\n✅ Build complete! Output → dist/\n');

@@ -90,12 +90,38 @@
     document.getElementById('loginPassword').value = '';
   }
 
-  function showDashboard() {
+  async function showDashboard() {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('dashboard').style.display = 'flex';
     document.getElementById('loadingScreen').style.display = 'none';
-    draft = store.getDraftData();
-    settings = store.getSettings();
+    
+    // Load data from Supabase (permanent storage) first
+    if (window.SupabaseData) {
+      try {
+        const sbResult = await window.SupabaseData.fetchAllDataForAdmin();
+        if (sbResult && sbResult.data) {
+          draft = sbResult.data;
+          settings = sbResult.settings || store.getSettings();
+          // Sync to localStorage
+          store.saveDraftData(draft);
+          store.savePublishedData(draft);
+          store.saveSettings(settings);
+          console.log('✅ Admin: Loaded data from Supabase');
+        } else {
+          draft = store.getDraftData();
+          settings = store.getSettings();
+          console.log('ℹ️ No data in Supabase yet, using local defaults');
+        }
+      } catch (err) {
+        console.warn('⚠️ Supabase load failed, using local data:', err);
+        draft = store.getDraftData();
+        settings = store.getSettings();
+      }
+    } else {
+      draft = store.getDraftData();
+      settings = store.getSettings();
+    }
+    
     navigateTo('dashboard');
     updateMsgCount();
   }
@@ -135,10 +161,30 @@
 
   /* ── Topbar ────────────────────────────────────────────────── */
   function setupTopbar() {
-    document.getElementById('publishBtn').addEventListener('click', () => {
+    document.getElementById('publishBtn').addEventListener('click', async () => {
+      // Publish to localStorage first
       store.publishDraft();
-      showToast('Changes published! 🚀', 'success');
       updateDraftIndicator();
+      
+      // Publish to Supabase (permanent database)
+      if (window.SupabaseData) {
+        showToast('Publishing to database...', 'info');
+        const result = await window.SupabaseData.publishToSupabase(draft, settings);
+        if (result.success) {
+          // Store the profileId for future operations
+          if (result.profileId && !draft._profileId) {
+            draft._profileId = result.profileId;
+            store.saveDraftData(draft);
+            store.savePublishedData(draft);
+          }
+          showToast('Changes published permanently! 🚀', 'success');
+        } else {
+          showToast('Published locally. Database error: ' + (result.error || 'Unknown'), 'error');
+        }
+      } else {
+        showToast('Changes published! 🚀', 'success');
+      }
+      
       refreshPreview();
     });
 
@@ -168,8 +214,17 @@
     showToast('Draft saved', 'info');
   }
 
-  function updateMsgCount() {
-    const msgs = store.getMessages();
+  async function updateMsgCount() {
+    let msgs = store.getMessages();
+    // Try to get count from Supabase
+    if (window.SupabaseData) {
+      try {
+        const sbMsgs = await window.SupabaseData.fetchMessagesFromDB(draft._profileId);
+        if (sbMsgs && sbMsgs.length > 0) {
+          msgs = sbMsgs;
+        }
+      } catch(e) { /* fall through to localStorage */ }
+    }
     const unread = msgs.filter(m => !m.read).length;
     document.getElementById('msgCount').textContent = unread;
     document.getElementById('msgCount').style.display = unread > 0 ? 'inline' : 'none';
@@ -504,14 +559,24 @@
   }
 
   /* ── Messages ──────────────────────────────────────────────── */
-  function renderMessages(el) {
-    const msgs = store.getMessages();
+  async function renderMessages(el) {
+    // Load messages from Supabase first, fall back to localStorage
+    let msgs = store.getMessages();
+    if (window.SupabaseData) {
+      try {
+        const sbMsgs = await window.SupabaseData.fetchMessagesFromDB(draft._profileId);
+        if (sbMsgs && sbMsgs.length > 0) {
+          msgs = sbMsgs;
+        }
+      } catch(e) { /* fall through */ }
+    }
+    
     el.innerHTML = `
       <div class="glass-card editor-section">
         <div class="editor-section-title"><i data-lucide="inbox"></i> Messages (${msgs.length})</div>
         <div class="messages-list">
           ${msgs.map(m=>`
-            <div class="message-row ${m.read?'':'unread'}" onclick="window._openMsg(${m.id})">
+            <div class="message-row ${m.read?'':'unread'}" onclick="window._openMsg('${m.id}')">
               <div class="message-indicator"></div>
               <div class="message-body">
                 <div class="message-name">${esc(m.name)}</div>
@@ -520,20 +585,29 @@
               </div>
               <div class="message-meta">
                 <div class="message-date">${new Date(m.date).toLocaleDateString()}</div>
-                <button class="item-btn delete" style="margin-top:4px;" onclick="event.stopPropagation();window._delMsg(${m.id})"><i data-lucide="trash-2"></i></button>
+                <button class="item-btn delete" style="margin-top:4px;" onclick="event.stopPropagation();window._delMsg('${m.id}')"><i data-lucide="trash-2"></i></button>
               </div>
             </div>`).join('')}
           ${msgs.length===0?'<div class="empty-state"><i data-lucide="inbox" class="empty-state-icon"></i><p>No messages yet</p></div>':''}
         </div>
       </div>`;
 
-    window._openMsg = (id) => {
-      store.markMessageRead(id); updateMsgCount();
-      const m = store.getMessages().find(x=>x.id===id);
+    // Store msgs reference for modal access
+    window._currentMsgs = msgs;
+
+    window._openMsg = async (id) => {
+      store.markMessageRead(id); 
+      if (window.SupabaseData) await window.SupabaseData.markMessageReadInDB(id);
+      updateMsgCount();
+      const m = window._currentMsgs.find(x => x.id == id);
       if(m) showModal('Message', `<p><strong>From:</strong> ${esc(m.name)} &lt;${esc(m.email)}&gt;</p><p style="color:var(--text-muted);font-size:0.8rem;">${new Date(m.date).toLocaleString()}</p><hr style="border-color:var(--glass-border);margin:12px 0;"><p style="white-space:pre-wrap;">${esc(m.message)}</p>`);
       renderMessages(el); lucide.createIcons();
     };
-    window._delMsg = (id) => { store.deleteMessage(id); updateMsgCount(); renderMessages(el); lucide.createIcons(); };
+    window._delMsg = async (id) => { 
+      store.deleteMessage(id); 
+      if (window.SupabaseData) await window.SupabaseData.deleteMessageFromDB(id);
+      updateMsgCount(); renderMessages(el); lucide.createIcons(); 
+    };
   }
 
   /* ── SEO ────────────────────────────────────────────────────── */
@@ -584,12 +658,12 @@
       });
     });
 
-    window._saveDesign = () => {
+    window._saveDesign = async () => {
       settings.primaryColor=v('dPrimary'); settings.secondaryColor=v('dSecondary');
       settings.glassOpacity=parseFloat(v('dOpacity')); settings.blurIntensity=parseInt(v('dBlur'));
       settings.borderRadius=parseInt(v('dRadius')); settings.particleDensity=parseInt(v('dParticle'));
       settings.animationSpeed=parseFloat(v('dSpeed')); settings.sectionSpacing=parseInt(v('dSpacing'));
-      store.saveSettings(settings); showToast('Design saved!','success');
+      store.saveSettings(settings); showToast('Design saved locally. Click Publish to save permanently.','success');
     };
     window._resetDesign = () => { settings=store.getDefaultSettings(); store.saveSettings(settings); renderDesign(el); lucide.createIcons(); showToast('Reset to defaults','info'); };
   }
