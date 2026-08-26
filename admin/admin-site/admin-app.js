@@ -398,8 +398,8 @@
                 <div class="item-meta">${s.category} · ${s.percentage}%</div>
               </div>
               <div class="item-actions">
-                <button class="item-btn" onclick="window._editSkill(${s.id})"><i data-lucide="pencil"></i></button>
-                <button class="item-btn delete" onclick="window._delSkill(${s.id})"><i data-lucide="trash-2"></i></button>
+                <button class="item-btn" onclick="window._editSkill('${s.id}')"><i data-lucide="pencil"></i></button>
+                <button class="item-btn delete" onclick="window._delSkill('${s.id}')"><i data-lucide="trash-2"></i></button>
               </div>
             </div>`).join('')}
           ${draft.skills.length===0?'<div class="empty-state"><i data-lucide="code-2" class="empty-state-icon"></i><p>No skills yet</p></div>':''}
@@ -407,8 +407,8 @@
       </div>`;
 
     window._addSkill = () => openSkillModal();
-    window._editSkill = (id) => openSkillModal(draft.skills.find(s=>s.id===id));
-    window._delSkill = (id) => { draft.skills = draft.skills.filter(s=>s.id!==id); saveDraft(); renderSkills(el); lucide.createIcons(); };
+    window._editSkill = (id) => openSkillModal(draft.skills.find(s=>String(s.id)===String(id)));
+    window._delSkill = (id) => { draft.skills = draft.skills.filter(s=>String(s.id)!==String(id)); saveDraft(); renderSkills(el); lucide.createIcons(); };
   }
 
   function openSkillModal(skill) {
@@ -445,8 +445,8 @@
                 <div class="item-meta">${p.category} · ${p.status} · ${(p.technologies||[]).join(', ')}</div>
               </div>
               <div class="item-actions">
-                <button class="item-btn" onclick="window._editProject(${p.id})"><i data-lucide="pencil"></i></button>
-                <button class="item-btn delete" onclick="window._delProject(${p.id})"><i data-lucide="trash-2"></i></button>
+                <button class="item-btn" onclick="window._editProject('${p.id}')"><i data-lucide="pencil"></i></button>
+                <button class="item-btn delete" onclick="window._delProject('${p.id}')"><i data-lucide="trash-2"></i></button>
               </div>
             </div>`).join('')}
           ${draft.projects.length===0?'<div class="empty-state"><p>No projects yet</p></div>':''}
@@ -454,8 +454,8 @@
       </div>`;
 
     window._addProject = () => openProjectModal();
-    window._editProject = (id) => openProjectModal(draft.projects.find(p=>p.id===id));
-    window._delProject = (id) => { draft.projects = draft.projects.filter(p=>p.id!==id); saveDraft(); renderProjects(el); lucide.createIcons(); };
+    window._editProject = (id) => openProjectModal(draft.projects.find(p=>String(p.id)===String(id)));
+    window._delProject = (id) => { draft.projects = draft.projects.filter(p=>String(p.id)!==String(id)); saveDraft(); renderProjects(el); lucide.createIcons(); };
   }
 
   function openProjectModal(proj) {
@@ -499,8 +499,8 @@
             ${item.icon?`<span class="item-icon">${item.icon}</span>`:''}
             <div class="item-info"><div class="item-name">${esc(nameGetter(item))}</div><div class="item-meta">${esc(metaGetter(item))}</div></div>
             <div class="item-actions">
-              <button class="item-btn" onclick="window._editItem(${item.id})"><i data-lucide="pencil"></i></button>
-              <button class="item-btn delete" onclick="window._deleteItem(${item.id})"><i data-lucide="trash-2"></i></button>
+              <button class="item-btn" onclick="window._editItem('${item.id}')"><i data-lucide="pencil"></i></button>
+              <button class="item-btn delete" onclick="window._deleteItem('${item.id}')"><i data-lucide="trash-2"></i></button>
             </div>
           </div>`).join('')}
           ${items.length===0?`<div class="empty-state"><p>No ${label.toLowerCase()} yet</p></div>`:''}
@@ -508,8 +508,8 @@
       </div>`;
 
     window._addItem = () => openGenericModal(key, fields, label);
-    window._editItem = (id) => openGenericModal(key, fields, label, items.find(i=>i.id===id));
-    window._deleteItem = (id) => { draft[key] = draft[key].filter(i=>i.id!==id); saveDraft(); renderPage(currentPage); lucide.createIcons(); };
+    window._editItem = (id) => openGenericModal(key, fields, label, items.find(i=>String(i.id)===String(id)));
+    window._deleteItem = (id) => { draft[key] = draft[key].filter(i=>String(i.id)!==String(id)); saveDraft(); renderPage(currentPage); lucide.createIcons(); };
   }
 
   function openGenericModal(key, fields, label, item) {

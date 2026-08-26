@@ -43,123 +43,20 @@ function getDefaultData() {
         { label: 'Years of Learning', value: 4, icon: 'clock' }
       ]
     },
-    skills: [
-      { id: 1, name: 'C', category: 'Programming', percentage: 85, icon: '🔵' },
-      { id: 2, name: 'C++', category: 'Programming', percentage: 80, icon: '🔷' },
-      { id: 3, name: 'Java', category: 'Programming', percentage: 75, icon: '☕' },
-      { id: 4, name: 'Python', category: 'Programming', percentage: 90, icon: '🐍' },
-      { id: 5, name: 'JavaScript', category: 'Programming', percentage: 85, icon: '⚡' },
-      { id: 6, name: 'HTML', category: 'Web Development', percentage: 95, icon: '🌐' },
-      { id: 7, name: 'CSS', category: 'Web Development', percentage: 90, icon: '🎨' },
-      { id: 8, name: 'React', category: 'Web Development', percentage: 80, icon: '⚛️' },
-      { id: 9, name: 'Node.js', category: 'Web Development', percentage: 78, icon: '🟢' },
-      { id: 10, name: 'MySQL', category: 'Database', percentage: 75, icon: '🗄️' },
-      { id: 11, name: 'PostgreSQL', category: 'Database', percentage: 70, icon: '🐘' },
-      { id: 12, name: 'Supabase', category: 'Database', percentage: 72, icon: '⚡' },
-      { id: 13, name: 'MongoDB', category: 'Database', percentage: 68, icon: '🍃' },
-      { id: 14, name: 'Machine Learning', category: 'AI / Data', percentage: 82, icon: '🤖' },
-      { id: 15, name: 'Data Analysis', category: 'AI / Data', percentage: 78, icon: '📊' },
-      { id: 16, name: 'AI Tools', category: 'AI / Data', percentage: 85, icon: '🧠' },
-      { id: 17, name: 'Git', category: 'Tools', percentage: 88, icon: '📦' },
-      { id: 18, name: 'GitHub', category: 'Tools', percentage: 90, icon: '🐙' },
-      { id: 19, name: 'VS Code', category: 'Tools', percentage: 92, icon: '💻' },
-      { id: 20, name: 'Figma', category: 'Tools', percentage: 70, icon: '🖌️' }
-    ],
-    projects: [
-      {
-        id: 1,
-        title: 'Zonerox.tech Platform',
-        description: 'AI-powered technology platform offering intelligent solutions for businesses. Features include automated workflows, data analytics, and machine learning integrations.',
-        image: '',
-        technologies: ['React', 'Node.js', 'Python', 'AI/ML', 'PostgreSQL'],
-        githubUrl: 'https://github.com/magendraprakash',
-        liveUrl: 'https://zonerox.tech',
-        category: 'AI',
-        status: 'Active',
-        order: 1
-      },
-      {
-        id: 2,
-        title: 'AI Content Generator',
-        description: 'An intelligent content generation system powered by modern AI models. Generates blog posts, social media content, and marketing copy with customizable tone and style.',
-        image: '',
-        technologies: ['Python', 'OpenAI', 'React', 'FastAPI'],
-        githubUrl: 'https://github.com/magendraprakash',
-        liveUrl: '#',
-        category: 'AI',
-        status: 'Completed',
-        order: 2
-      },
-      {
-        id: 3,
-        title: 'Smart Portfolio Builder',
-        description: 'A dynamic portfolio management system with an admin dashboard, glassmorphism UI, and real-time content editing capabilities.',
-        image: '',
-        technologies: ['HTML', 'CSS', 'JavaScript', 'Supabase'],
-        githubUrl: 'https://github.com/magendraprakash',
-        liveUrl: '#',
-        category: 'Web',
-        status: 'Active',
-        order: 3
-      }
-    ],
-    experience: [
-      {
-        id: 1,
-        organization: 'Zonerox.tech',
-        position: 'Founder & CEO',
-        startDate: '2024',
-        endDate: 'Present',
-        description: 'Founded and leading an AI technology startup focused on building intelligent solutions. Managing product development, team coordination, and business strategy.',
-        technologies: ['AI/ML', 'React', 'Node.js', 'Python', 'Cloud'],
-        location: 'India',
-        order: 1
-      }
-    ],
-    education: [
-      {
-        id: 1,
-        institution: 'University',
-        degree: 'Bachelor of Engineering',
-        department: 'Computer Science and Engineering',
-        startYear: '2022',
-        endYear: '2026',
-        description: 'Pursuing B.E. in Computer Science with focus on AI, Machine Learning, and Software Development.',
-        grade: '',
-        order: 1
-      }
-    ],
-    certificates: [
-      {
-        id: 1,
-        name: 'Outstanding Innovator Recognition',
-        organization: 'Academic Incubation Board',
-        date: '2024',
-        credentialId: '',
-        credentialUrl: '',
-        image: '',
-        order: 1
-      }
-    ],
-    achievements: [
-      {
-        id: 1,
-        title: 'Outstanding Innovator Recognition',
-        description: 'Received recognition from the Academic Incubation Board for innovative contributions in AI and technology.',
-        category: 'Recognition',
-        date: '2024',
-        icon: '🏆',
-        order: 1
-      }
-    ],
+    skills: [],
+    projects: [],
+    experience: [],
+    education: [],
+    certificates: [],
+    achievements: [],
     socialLinks: {
-      github: 'https://github.com/magendraprakash',
-      linkedin: 'https://linkedin.com/in/magendraprakash',
+      github: '',
+      linkedin: '',
       instagram: '',
       youtube: '',
       twitter: '',
       facebook: '',
-      website: 'https://zonerox.tech',
+      website: '',
       custom: []
     },
     seo: {
@@ -454,7 +351,7 @@ async function updateEmail(newEmail) {
  */
 function onAuthStateChange(callback) {
   const sb = _getSupabase();
-  if (!sb) return { data: { subscription: { unsubscribe: () => {} } } };
+  if (!sb) return { data: { subscription: { unsubscribe: () => { } } } };
   return sb.auth.onAuthStateChange(callback);
 }
 
