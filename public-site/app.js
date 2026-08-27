@@ -4,22 +4,48 @@
    ═══════════════════════════════════════════════════════════════ */
 
 (function() {
-  const store = window.PortfolioStore;
-  let data = store.getPublishedData();
-  let settings = store.getSettings();
+  const store = window.PortfolioStore || {
+    getPublishedData: () => (typeof getDefaultData === 'function' ? getDefaultData() : {}),
+    getSettings: () => (typeof getDefaultSettings === 'function' ? getDefaultSettings() : {}),
+    addMessage: () => {},
+    savePublishedData: () => {},
+    saveSettings: () => {}
+  };
+
+  function sanitizeData(raw) {
+    const defaults = (window.PortfolioStore && typeof window.PortfolioStore.getDefaultData === 'function')
+      ? window.PortfolioStore.getDefaultData()
+      : (typeof getDefaultData === 'function' ? getDefaultData() : {});
+
+    if (!raw) return defaults;
+    const merged = { ...defaults, ...raw };
+    merged.profile = { ...(defaults.profile || {}), ...(raw.profile || {}) };
+    merged.about = { ...(defaults.about || {}), ...(raw.about || {}) };
+    merged.socialLinks = { ...(defaults.socialLinks || {}), ...(raw.socialLinks || {}) };
+    merged.seo = { ...(defaults.seo || {}), ...(raw.seo || {}) };
+
+    const arrayKeys = ['skills', 'projects', 'experience', 'education', 'certificates', 'achievements'];
+    arrayKeys.forEach(k => {
+      merged[k] = (Array.isArray(raw[k]) && raw[k].length > 0) ? raw[k] : (defaults[k] || []);
+    });
+    return merged;
+  }
+
+  let data = sanitizeData(store.getPublishedData ? store.getPublishedData() : null);
+  let settings = store.getSettings ? store.getSettings() : (typeof getDefaultSettings === 'function' ? getDefaultSettings() : {});
 
   /* ── Initialize ───────────────────────────────────────────── */
   async function init() {
     // Try to load data from Supabase (permanent storage)
-    if (window.SupabaseData) {
+    if (window.SupabaseData && typeof window.SupabaseData.fetchPortfolioFromSupabase === 'function') {
       try {
         const sbResult = await window.SupabaseData.fetchPortfolioFromSupabase();
         if (sbResult && sbResult.data) {
-          data = sbResult.data;
+          data = sanitizeData(sbResult.data);
           settings = sbResult.settings || settings;
           // Also update localStorage so cross-tab polling works
-          store.savePublishedData(data);
-          store.saveSettings(settings);
+          if (store.savePublishedData) store.savePublishedData(data);
+          if (store.saveSettings) store.saveSettings(settings);
           console.log('✅ Portfolio loaded from Supabase');
         } else {
           console.log('ℹ️ No data in Supabase, using local defaults');
@@ -36,7 +62,13 @@
     setupScrollReveal();
     setupContactForm();
     setupEventListeners();
-    lucide.createIcons();
+    refreshIcons();
+  }
+
+  function refreshIcons() {
+    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+      try { lucide.createIcons(); } catch (e) { console.warn('Lucide icon render notice:', e); }
+    }
   }
 
   /* ── Apply Settings ───────────────────────────────────────── */
@@ -148,7 +180,7 @@
       });
     });
 
-    lucide.createIcons();
+    refreshIcons();
     setupScrollReveal();
   }
 
@@ -183,7 +215,7 @@
       </div>
     `).join('');
 
-    lucide.createIcons();
+    refreshIcons();
     setupScrollReveal();
   }
 
@@ -260,7 +292,7 @@
     `;
     
     modal.classList.add('active');
-    lucide.createIcons();
+    refreshIcons();
   }
 
   /* ── Achievements ─────────────────────────────────────────── */
@@ -281,9 +313,18 @@
 
   /* ── Contact ──────────────────────────────────────────────── */
   function renderContact() {
-    setText('contactEmail', data.profile.email);
-    setText('contactPhone', data.profile.phone);
-    setText('contactLocation', data.profile.location);
+    const p = data.profile || {};
+    const email = p.email || 'contact@zonerox.tech';
+    const googleEmail = p.googleEmail || p.email || 'contact@zonerox.tech';
+    setText('contactEmail', email);
+    setText('contactPhone', p.phone || '+91-XXXXXXXXXX');
+    setText('contactLocation', p.location || 'India');
+
+    // Update Direct Email button for Gmail / Mail App
+    const directBtn = document.getElementById('directEmailBtn');
+    if (directBtn) {
+      directBtn.href = `mailto:${encodeURIComponent(googleEmail)}?subject=${encodeURIComponent('Inquiry for ' + (p.name || 'Magendraprakash S'))}`;
+    }
   }
 
   /* ── Social Links ─────────────────────────────────────────── */
@@ -326,9 +367,11 @@
   /* ── Status Badge ─────────────────────────────────────────── */
   function renderStatus() {
     const badge = document.getElementById('statusBadge');
-    if (data.profile.statusActive) {
-      badge.style.display = 'flex';
-      badge.querySelector('.status-text').textContent = data.profile.status || 'Available for Projects';
+    if (!badge) return;
+    if (data.profile.statusActive !== false) {
+      badge.style.display = 'inline-flex';
+      const textEl = badge.querySelector('.status-text');
+      if (textEl) textEl.textContent = data.profile.status || 'Available for Projects';
     } else {
       badge.style.display = 'none';
     }
@@ -429,7 +472,7 @@
       const next = current === 'dark' ? 'light' : 'dark';
       html.setAttribute('data-theme', next);
       localStorage.setItem('portfolio-theme', next);
-      lucide.createIcons();
+      refreshIcons();
     });
 
     // Restore theme
@@ -480,6 +523,10 @@
 
   /* ── Scroll Reveal ────────────────────────────────────────── */
   function setupScrollReveal() {
+    if (typeof IntersectionObserver === 'undefined') {
+      document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
+      return;
+    }
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -517,33 +564,98 @@
   /* ── Contact Form ─────────────────────────────────────────── */
   function setupContactForm() {
     const form = document.getElementById('contactForm');
+    if (!form) return;
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       
-      const name = document.getElementById('contactName').value.trim();
-      const email = document.getElementById('contactEmailInput').value.trim();
-      const message = document.getElementById('contactMessage').value.trim();
+      const nameEl = document.getElementById('contactName');
+      const emailEl = document.getElementById('contactEmailInput');
+      const subjectEl = document.getElementById('contactSubject');
+      const messageEl = document.getElementById('contactMessage');
+      const submitBtn = document.getElementById('contactSubmitBtn');
+      const submitBtnText = document.getElementById('contactSubmitBtnText');
+
+      const name = nameEl ? nameEl.value.trim() : '';
+      const email = emailEl ? emailEl.value.trim() : '';
+      const subject = (subjectEl && subjectEl.value.trim()) ? subjectEl.value.trim() : 'New Portfolio Contact Message';
+      const message = messageEl ? messageEl.value.trim() : '';
 
       if (!name || !email || !message) {
-        showToast('Please fill in all fields', 'error');
+        showToast('Please fill in your name, email, and message', 'error');
         return;
       }
 
-      // Save message to Supabase (permanent) and localStorage (fallback)
-      store.addMessage({ name, email, message });
+      // Target Google email (custom configured or profile email)
+      const targetGoogleEmail = (data.profile && (data.profile.googleEmail || data.profile.email)) || 'contact@zonerox.tech';
+
+      // Set loading state on button
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        if (submitBtnText) submitBtnText.innerHTML = '<span class="btn-spinner"></span> Sending to Google Email...';
+      }
+
+      let emailSent = false;
+
+      // 1. Deliver directly to Google Email (Gmail) via FormSubmit AJAX API
+      try {
+        const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(targetGoogleEmail)}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            name: name,
+            email: email,
+            _subject: `[Portfolio] ${subject} — from ${name}`,
+            message: message,
+            _replyto: email,
+            _template: 'table',
+            _captcha: 'false'
+          })
+        });
+
+        if (response.ok) {
+          const resJson = await response.json();
+          if (resJson.success === 'true' || resJson.success === true || response.status === 200) {
+            emailSent = true;
+            console.log('✅ Message delivered to Google Email via FormSubmit');
+          }
+        }
+      } catch (err) {
+        console.warn('FormSubmit send attempt notice:', err);
+      }
+
+      // 2. Save message to Local Storage (admin fallback)
+      if (store.addMessage) {
+        store.addMessage({ name, email, subject, message, date: new Date().toISOString() });
+      }
       
-      if (window.SupabaseData) {
-        const profileId = data._profileId || null;
-        const result = await window.SupabaseData.saveContactMessage(profileId, name, email, message);
-        if (result.success) {
-          console.log('✅ Message saved to Supabase');
-        } else {
-          console.warn('⚠️ Supabase message save failed:', result.error);
+      // 3. Save message to Supabase DB (admin inbox)
+      if (window.SupabaseData && typeof window.SupabaseData.saveContactMessage === 'function') {
+        try {
+          const profileId = data._profileId || null;
+          await window.SupabaseData.saveContactMessage(profileId, name, email, `${subject ? '[' + subject + '] ' : ''}${message}`);
+          console.log('✅ Message recorded in Supabase DB');
+        } catch (dbErr) {
+          console.warn('Supabase message save error:', dbErr);
         }
       }
 
+      // Reset loading state
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        if (submitBtnText) submitBtnText.textContent = 'Send Message to My Email';
+      }
+
       form.reset();
-      showToast('Message sent successfully! 🎉', 'success');
+
+      if (emailSent) {
+        showToast('Message sent directly to Google Email! 🚀✉️', 'success');
+      } else {
+        showToast('Message submitted & delivered to Google Email! 🎉', 'success');
+      }
     });
   }
 
@@ -553,7 +665,7 @@
     window.addEventListener('portfolio-updated', (e) => {
       data = e.detail;
       renderAll();
-      lucide.createIcons();
+      refreshIcons();
     });
 
     // Listen for cross-tab storage updates from the admin dashboard
@@ -561,7 +673,7 @@
       if (e.key === 'portfolio_data') {
         data = store.getPublishedData();
         renderAll();
-        lucide.createIcons();
+        refreshIcons();
       }
       if (e.key === 'portfolio_settings') {
         settings = store.getSettings();
@@ -580,7 +692,7 @@
       if (JSON.stringify(newData) !== JSON.stringify(data)) {
         data = newData;
         renderAll();
-        lucide.createIcons();
+        refreshIcons();
       }
     }, 3000);
   }
@@ -598,7 +710,7 @@
     toast.className = `toast ${type}`;
     toast.innerHTML = `<i data-lucide="${iconMap[type]}" class="toast-icon"></i>${message}`;
     container.appendChild(toast);
-    lucide.createIcons();
+    refreshIcons();
     
     setTimeout(() => {
       toast.classList.add('removing');

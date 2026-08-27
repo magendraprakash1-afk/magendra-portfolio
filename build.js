@@ -81,6 +81,10 @@ for (const entry of publicFiles) {
   }
 }
 
+// 2.5 Ensure root shared/ is in sync with admin/shared/ for local development
+const rootShared = path.join(__dirname, 'shared');
+copyDir(path.join(__dirname, 'admin', 'shared'), rootShared);
+
 // 3. Copy shared/ → dist/shared/
 console.log('\n📦 Copying shared/ → dist/shared/');
 copyDir(path.join(__dirname, 'admin', 'shared'), path.join(DIST, 'shared'));

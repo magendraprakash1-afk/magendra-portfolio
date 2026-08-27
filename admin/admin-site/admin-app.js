@@ -307,10 +307,11 @@
         <div class="form-group"><label>Job Title</label><input id="pTitle" value="${esc(p.title)}"></div></div>
         <div class="form-row"><div class="form-group"><label>Company</label><input id="pCompany" value="${esc(p.company)}"></div>
         <div class="form-group"><label>Company Role</label><input id="pRole" value="${esc(p.companyRole)}"></div></div>
-        <div class="form-row"><div class="form-group"><label>Email</label><input id="pEmail" value="${esc(p.email)}"></div>
-        <div class="form-group"><label>Phone</label><input id="pPhone" value="${esc(p.phone)}"></div></div>
-        <div class="form-row"><div class="form-group"><label>Location</label><input id="pLocation" value="${esc(p.location)}"></div>
-        <div class="form-group"><label>Education</label><input id="pEdu" value="${esc(p.education)}"></div></div>
+        <div class="form-row"><div class="form-group"><label>Display Email</label><input id="pEmail" value="${esc(p.email)}"></div>
+        <div class="form-group"><label>Google / Gmail Address (for Contact Form Delivery)</label><input id="pGoogleEmail" value="${esc(p.googleEmail||p.email||'')}" placeholder="your.google.email@gmail.com"></div></div>
+        <div class="form-row"><div class="form-group"><label>Phone</label><input id="pPhone" value="${esc(p.phone)}"></div>
+        <div class="form-group"><label>Location</label><input id="pLocation" value="${esc(p.location)}"></div></div>
+        <div class="form-group"><label>Education</label><input id="pEdu" value="${esc(p.education)}"></div>
         <div class="form-group"><label>Biography</label><textarea id="pBio" rows="4">${esc(p.bio)}</textarea></div>
         <div class="form-row"><div class="form-group"><label>Status Text</label><input id="pStatus" value="${esc(p.status)}"></div>
         <div class="form-group"><label>Status Active</label><select id="pStatusActive"><option value="true" ${p.statusActive?'selected':''}>Active</option><option value="false" ${!p.statusActive?'selected':''}>Hidden</option></select></div></div>
@@ -326,7 +327,8 @@
     window._saveProfile = () => {
       draft.profile.name = v('pName'); draft.profile.title = v('pTitle');
       draft.profile.company = v('pCompany'); draft.profile.companyRole = v('pRole');
-      draft.profile.email = v('pEmail'); draft.profile.phone = v('pPhone');
+      draft.profile.email = v('pEmail'); draft.profile.googleEmail = v('pGoogleEmail');
+      draft.profile.phone = v('pPhone');
       draft.profile.location = v('pLocation'); draft.profile.education = v('pEdu');
       draft.profile.bio = v('pBio'); draft.profile.status = v('pStatus');
       draft.profile.statusActive = v('pStatusActive') === 'true';
