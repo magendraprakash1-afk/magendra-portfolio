@@ -584,23 +584,19 @@ async function publishToSupabase(portfolioData, settingsData) {
 
 async function saveContactMessage(profileId, name, email, message) {
   try {
-    // If we don't know the profile ID, look it up
     let pid = profileId;
     if (!pid) {
       const profiles = await sbGet('profiles', 'limit=1');
-      pid = profiles && profiles[0] ? profiles[0].id : null;
+      pid = Array.isArray(profiles) && profiles[0] ? profiles[0].id : null;
     }
-    if (!pid) {
-      return { success: false, error: 'No profile found' };
-    }
+    const payload = {
+      name: name || '',
+      email: email || '',
+      message: message || ''
+    };
+    if (pid) payload.profile_id = pid;
 
-    const result = await sbPost('contact_messages', {
-      profile_id: pid,
-      name,
-      email,
-      message
-    });
-
+    const result = await sbPost('contact_messages', payload);
     return result ? { success: true } : { success: false, error: 'Failed to save' };
   } catch (err) {
     return { success: false, error: err.message };
@@ -609,47 +605,59 @@ async function saveContactMessage(profileId, name, email, message) {
 
 /* ── Admin: Mark message as read ── */
 async function markMessageReadInDB(messageId) {
-  const token = await getAuthToken();
-  if (!token) return;
-  await sbPatch('contact_messages', 'id=eq.' + messageId, { is_read: true }, token);
+  try {
+    const token = (await getAuthToken()) || SB_KEY;
+    await sbPatch('contact_messages', 'id=eq.' + messageId, { is_read: true }, token);
+  } catch (e) {
+    console.warn('markMessageReadInDB notice:', e);
+  }
 }
 
 /* ── Admin: Delete message ── */
 async function deleteMessageFromDB(messageId) {
-  const token = await getAuthToken();
-  if (!token) return;
-  await sbDelete('contact_messages', 'id=eq.' + messageId, token);
+  try {
+    const token = (await getAuthToken()) || SB_KEY;
+    await sbDelete('contact_messages', 'id=eq.' + messageId, token);
+  } catch (e) {
+    console.warn('deleteMessageFromDB notice:', e);
+  }
 }
 
 /* ── Admin: Get all messages ── */
 async function fetchMessagesFromDB(profileId) {
-  let pid = profileId;
-  if (!pid) {
-    const profiles = await sbGet('profiles', 'limit=1');
-    pid = profiles && profiles[0] ? profiles[0].id : null;
-  }
-  if (!pid) return [];
-  
-  const token = await getAuthToken();
-  const url = SB_REST + 'contact_messages?profile_id=eq.' + pid + '&order=created_at.desc';
-  const res = await fetch(url, {
-    headers: {
-      'apikey': SB_KEY,
-      'Authorization': 'Bearer ' + (token || SB_KEY),
-      'Content-Type': 'application/json'
+  try {
+    let pid = profileId;
+    if (!pid) {
+      const profiles = await sbGet('profiles', 'limit=1');
+      pid = Array.isArray(profiles) && profiles[0] ? profiles[0].id : null;
     }
-  });
-  if (!res.ok) return [];
-  const rows = await res.json();
-  return rows.map(m => ({
-    id: m.id,
-    _dbId: m.id,
-    name: m.name,
-    email: m.email,
-    message: m.message,
-    date: m.created_at,
-    read: m.is_read || false
-  }));
+    
+    const token = await getAuthToken();
+    const queryParam = pid ? 'profile_id=eq.' + pid + '&order=created_at.desc' : 'order=created_at.desc';
+    const url = SB_REST + 'contact_messages?' + queryParam;
+    const res = await fetch(url, {
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': 'Bearer ' + (token || SB_KEY),
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!res.ok) return [];
+    const rows = await res.json();
+    if (!Array.isArray(rows)) return [];
+    return rows.map(m => ({
+      id: m.id,
+      _dbId: m.id,
+      name: m.name,
+      email: m.email,
+      message: m.message,
+      date: m.created_at,
+      read: m.is_read || false
+    }));
+  } catch (e) {
+    console.warn('fetchMessagesFromDB notice:', e);
+    return [];
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════

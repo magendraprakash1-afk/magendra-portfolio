@@ -534,15 +534,68 @@
 
   /* ── Resume ────────────────────────────────────────────────── */
   function renderResume(el) {
+    const hasResume = !!(draft.profile.resumeUrl);
     el.innerHTML = `
       <div class="glass-card editor-section">
         <div class="editor-section-title"><i data-lucide="file-text"></i> Resume Manager</div>
-        <div class="form-group"><label>Resume URL / Link</label><input id="resumeUrl" value="${esc(draft.profile.resumeUrl||'')}" placeholder="https://drive.google.com/..."></div>
-        <p style="font-size:0.8rem;color:var(--text-muted);margin:8px 0;">Upload your resume to Google Drive or Dropbox and paste the public link here.</p>
-        <div class="form-actions">
-          <button class="btn btn-primary" onclick="draft.profile.resumeUrl=v('resumeUrl');saveDraft();"><i data-lucide="save" class="btn-icon"></i> Save</button>
+        
+        <div class="resume-status-badge ${hasResume ? 'active' : ''}">
+          <i data-lucide="${hasResume ? 'check-circle' : 'alert-circle'}"></i>
+          <span>${hasResume ? 'Custom Resume Link / File Active' : 'Dynamic HTML / Printable Resume Active'}</span>
+        </div>
+
+        <div class="resume-upload-zone" onclick="document.getElementById('resumeFileInput').click()">
+          <i data-lucide="upload-cloud" class="resume-upload-icon"></i>
+          <p style="font-weight:600;margin-bottom:4px;">Upload Resume File (PDF / DOCX)</p>
+          <p style="font-size:0.8rem;color:var(--text-muted);">Click here to select and upload your resume from your computer</p>
+          <input type="file" id="resumeFileInput" accept=".pdf,.doc,.docx" style="display:none" onchange="window._handleResumeUpload(event)">
+        </div>
+
+        <div class="form-group">
+          <label>Or Paste Public Resume URL / Cloud Link</label>
+          <input id="resumeUrl" value="${esc(draft.profile.resumeUrl||'')}" placeholder="https://drive.google.com/... or https://your-domain.com/resume.pdf">
+        </div>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin:8px 0;">Google Drive, Dropbox, OneDrive, Notion, or custom hosted link.</p>
+
+        <div class="form-actions" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
+          <button class="btn btn-primary" onclick="window._saveResumeLink()"><i data-lucide="save" class="btn-icon"></i> Save Resume Link</button>
+          ${hasResume ? `<a href="${draft.profile.resumeUrl}" target="_blank" rel="noopener" class="btn btn-secondary"><i data-lucide="external-link" class="btn-icon"></i> Preview Link</a>` : ''}
+          ${hasResume ? `<button class="btn btn-outline" onclick="window._clearResume()"><i data-lucide="trash-2" class="btn-icon"></i> Remove Custom Link</button>` : ''}
         </div>
       </div>`;
+
+    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') lucide.createIcons();
+
+    window._saveResumeLink = () => {
+      draft.profile.resumeUrl = v('resumeUrl').trim();
+      saveDraft();
+      showToast('Resume link saved successfully!', 'success');
+      renderResume(el);
+    };
+
+    window._clearResume = () => {
+      draft.profile.resumeUrl = '';
+      saveDraft();
+      showToast('Custom resume link removed. Using dynamic resume.', 'info');
+      renderResume(el);
+    };
+
+    window._handleResumeUpload = (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('File is too large (maximum size is 5MB)', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        draft.profile.resumeUrl = e.target.result;
+        saveDraft();
+        showToast(`Uploaded ${file.name} successfully!`, 'success');
+        renderResume(el);
+      };
+      reader.readAsDataURL(file);
+    };
   }
 
   /* ── Social Links ──────────────────────────────────────────── */
@@ -557,58 +610,93 @@
           <button class="btn btn-primary" onclick="window._saveSocial()"><i data-lucide="save" class="btn-icon"></i> Save Draft</button>
         </div>
       </div>`;
+    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') lucide.createIcons();
     window._saveSocial = () => { links.forEach(l=>{draft.socialLinks[l]=v('social_'+l);}); saveDraft(); };
   }
 
   /* ── Messages ──────────────────────────────────────────────── */
   async function renderMessages(el) {
-    // Load messages from Supabase first, fall back to localStorage
-    let msgs = store.getMessages();
+    // 1. Get messages from local store
+    let localMsgs = store.getMessages() || [];
+    let msgs = [...localMsgs];
+
+    // 2. Fetch from Supabase and synchronize/merge
     if (window.SupabaseData) {
       try {
         const sbMsgs = await window.SupabaseData.fetchMessagesFromDB(draft._profileId);
-        if (sbMsgs && sbMsgs.length > 0) {
-          msgs = sbMsgs;
+        if (Array.isArray(sbMsgs) && sbMsgs.length > 0) {
+          const map = new Map();
+          localMsgs.forEach(m => map.set(String(m.id || m.date), m));
+          sbMsgs.forEach(m => map.set(String(m.id || m.date), m));
+          msgs = Array.from(map.values()).sort((a, b) => new Date(b.date) - new Date(a.date));
         }
-      } catch(e) { /* fall through */ }
+      } catch(e) {
+        console.warn('Supabase messages sync notice:', e);
+      }
     }
     
     el.innerHTML = `
       <div class="glass-card editor-section">
-        <div class="editor-section-title"><i data-lucide="inbox"></i> Messages (${msgs.length})</div>
+        <div class="editor-section-title"><i data-lucide="inbox"></i> Messages Inbox (${msgs.length})</div>
         <div class="messages-list">
           ${msgs.map(m=>`
             <div class="message-row ${m.read?'':'unread'}" onclick="window._openMsg('${m.id}')">
               <div class="message-indicator"></div>
               <div class="message-body">
-                <div class="message-name">${esc(m.name)}</div>
-                <div class="message-email">${esc(m.email)}</div>
-                <div class="message-preview">${esc(m.message)}</div>
+                <div class="message-name">${esc(m.name || 'Anonymous Visitor')}</div>
+                <div class="message-email">${esc(m.email || 'No email')}</div>
+                <div class="message-preview">${esc(m.message || 'No content')}</div>
               </div>
               <div class="message-meta">
-                <div class="message-date">${new Date(m.date).toLocaleDateString()}</div>
-                <button class="item-btn delete" style="margin-top:4px;" onclick="event.stopPropagation();window._delMsg('${m.id}')"><i data-lucide="trash-2"></i></button>
+                <div class="message-date">${new Date(m.date).toLocaleDateString()} ${new Date(m.date).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                <button class="item-btn delete" title="Delete message" onclick="event.stopPropagation();window._delMsg('${m.id}')">
+                  <i data-lucide="trash-2"></i>
+                </button>
               </div>
             </div>`).join('')}
-          ${msgs.length===0?'<div class="empty-state"><i data-lucide="inbox" class="empty-state-icon"></i><p>No messages yet</p></div>':''}
+          ${msgs.length===0?'<div class="empty-state"><i data-lucide="inbox" class="empty-state-icon"></i><p>No messages received yet. When visitors message you, they will appear here and in your Google Email!</p></div>':''}
         </div>
       </div>`;
+
+    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') lucide.createIcons();
 
     // Store msgs reference for modal access
     window._currentMsgs = msgs;
 
     window._openMsg = async (id) => {
       store.markMessageRead(id); 
-      if (window.SupabaseData) await window.SupabaseData.markMessageReadInDB(id);
+      if (window.SupabaseData && typeof window.SupabaseData.markMessageReadInDB === 'function') {
+        try { await window.SupabaseData.markMessageReadInDB(id); } catch(e){}
+      }
       updateMsgCount();
-      const m = window._currentMsgs.find(x => x.id == id);
-      if(m) showModal('Message', `<p><strong>From:</strong> ${esc(m.name)} &lt;${esc(m.email)}&gt;</p><p style="color:var(--text-muted);font-size:0.8rem;">${new Date(m.date).toLocaleString()}</p><hr style="border-color:var(--glass-border);margin:12px 0;"><p style="white-space:pre-wrap;">${esc(m.message)}</p>`);
-      renderMessages(el); lucide.createIcons();
+      const m = (window._currentMsgs || []).find(x => String(x.id) === String(id));
+      if (m) {
+        m.read = true;
+        showModal('Message Details', `
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div><strong style="color:var(--text-primary)">From:</strong> <span style="color:var(--accent-primary);font-weight:700;">${esc(m.name)}</span> &lt;<a href="mailto:${esc(m.email)}" style="color:var(--accent-secondary)">${esc(m.email)}</a>&gt;</div>
+            <div style="color:var(--text-muted);font-size:0.8rem;"><i data-lucide="clock" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:4px;"></i>${new Date(m.date).toLocaleString()}</div>
+            <hr style="border:none;border-top:1px solid var(--glass-border);margin:8px 0;">
+            <div style="white-space:pre-wrap;line-height:1.6;color:var(--text-secondary);background:rgba(255,255,255,0.03);padding:14px;border-radius:8px;border:1px solid var(--glass-border);">${esc(m.message)}</div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;">
+              <a href="mailto:${esc(m.email)}?subject=Re:%20Portfolio%20Inquiry" class="btn btn-primary"><i data-lucide="reply" class="btn-icon"></i> Reply via Email</a>
+              <button class="btn btn-danger" onclick="closeModal();window._delMsg('${m.id}')"><i data-lucide="trash-2" class="btn-icon"></i> Delete</button>
+            </div>
+          </div>
+        `);
+      }
+      await renderMessages(el);
     };
+
     window._delMsg = async (id) => { 
+      if (!confirm('Are you sure you want to permanently delete this message?')) return;
       store.deleteMessage(id); 
-      if (window.SupabaseData) await window.SupabaseData.deleteMessageFromDB(id);
-      updateMsgCount(); renderMessages(el); lucide.createIcons(); 
+      if (window.SupabaseData && typeof window.SupabaseData.deleteMessageFromDB === 'function') {
+        try { await window.SupabaseData.deleteMessageFromDB(id); } catch(e){}
+      }
+      showToast('Message deleted permanently', 'info');
+      updateMsgCount();
+      await renderMessages(el);
     };
   }
 

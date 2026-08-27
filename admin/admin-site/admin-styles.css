@@ -932,11 +932,168 @@ input, textarea, select { font: inherit; }
   width: 48px; height: 48px;
   margin: 0 auto 16px;
   opacity: 0.4;
+  color: var(--accent-secondary);
 }
 
 .empty-state p {
   font-size: 0.9rem;
   margin-bottom: 16px;
+}
+
+/* ═══════ MESSAGES INBOX ═══════ */
+.messages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.message-row {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  position: relative;
+}
+
+.message-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+.message-row.unread {
+  background: rgba(0, 255, 136, 0.04);
+  border-color: rgba(0, 255, 136, 0.25);
+}
+
+.message-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: transparent;
+  transition: var(--transition-fast);
+}
+
+.message-row.unread .message-indicator {
+  background: var(--accent-primary);
+  box-shadow: 0 0 10px var(--accent-primary);
+}
+
+.message-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.message-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.message-email {
+  font-size: 0.82rem;
+  color: var(--accent-secondary);
+  font-family: var(--font-mono);
+}
+
+.message-preview {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.message-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.message-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.message-meta .item-btn.delete {
+  background: rgba(255, 77, 77, 0.12);
+  border: 1px solid rgba(255, 77, 77, 0.25);
+  color: #ff5e5e;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.message-meta .item-btn.delete:hover {
+  background: #ff4d4d;
+  color: #ffffff;
+  border-color: #ff4d4d;
+  box-shadow: 0 0 12px rgba(255, 77, 77, 0.6);
+  transform: scale(1.08);
+}
+
+.message-meta .item-btn.delete i {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.2;
+}
+
+/* ═══════ RESUME MANAGER ═══════ */
+.resume-upload-zone {
+  border: 2px dashed var(--glass-border);
+  border-radius: var(--border-radius-sm);
+  padding: 28px 20px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  margin-bottom: 20px;
+}
+
+.resume-upload-zone:hover {
+  border-color: var(--accent-primary);
+  background: var(--accent-glow);
+}
+
+.resume-upload-icon {
+  width: 36px;
+  height: 36px;
+  color: var(--accent-primary);
+  margin: 0 auto 10px;
+}
+
+.resume-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
+
+.resume-status-badge.active {
+  border-color: var(--success);
+  color: var(--success);
+  background: rgba(0, 255, 136, 0.08);
 }
 
 /* ═══════ AUTH LOADING ═══════ */

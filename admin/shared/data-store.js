@@ -395,7 +395,7 @@ function addMessage(msg) {
 
 function markMessageRead(id) {
   const messages = getMessages();
-  const m = messages.find(m => m.id === id);
+  const m = messages.find(m => String(m.id) === String(id));
   if (m) m.read = true;
   localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
   return messages;
@@ -403,7 +403,7 @@ function markMessageRead(id) {
 
 function deleteMessage(id) {
   let messages = getMessages();
-  messages = messages.filter(m => m.id !== id);
+  messages = messages.filter(m => String(m.id) !== String(id));
   localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
   return messages;
 }

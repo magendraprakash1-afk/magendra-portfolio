@@ -113,15 +113,35 @@
       imgEl.innerHTML = `<img src="${p.profileImage}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;">`;
     }
     
-    // Resume buttons
+    // Resume buttons & interactive download/preview handler
     const resumeBtn = document.getElementById('downloadResumeBtn');
     const resumeBtnAlt = document.getElementById('downloadResumeBtnAlt');
     const viewBtn = document.getElementById('viewResumeBtn');
-    if (p.resumeUrl) {
-      resumeBtn.href = p.resumeUrl;
-      resumeBtn.setAttribute('download', '');
-      if (resumeBtnAlt) { resumeBtnAlt.href = p.resumeUrl; resumeBtnAlt.setAttribute('download', ''); }
-      if (viewBtn) { viewBtn.href = p.resumeUrl; viewBtn.setAttribute('target', '_blank'); }
+
+    const handleResumeAction = (e) => {
+      if (e) e.preventDefault();
+      if (p.resumeUrl && (p.resumeUrl.startsWith('http://') || p.resumeUrl.startsWith('https://') || p.resumeUrl.startsWith('data:') || p.resumeUrl.endsWith('.pdf'))) {
+        window.open(p.resumeUrl, '_blank', 'noopener,noreferrer');
+        showToast('Opening Resume document... 📄', 'info');
+      } else {
+        openResumeModal();
+      }
+    };
+
+    if (resumeBtn) {
+      resumeBtn.href = p.resumeUrl || '#';
+      resumeBtn.onclick = handleResumeAction;
+    }
+    if (resumeBtnAlt) {
+      resumeBtnAlt.href = p.resumeUrl || '#';
+      resumeBtnAlt.onclick = handleResumeAction;
+    }
+    if (viewBtn) {
+      viewBtn.href = p.resumeUrl || '#';
+      viewBtn.onclick = (e) => {
+        if (e) e.preventDefault();
+        openResumeModal();
+      };
     }
 
     // Floating cards
@@ -291,6 +311,138 @@
       ${cert.credentialUrl ? `<a href="${cert.credentialUrl}" target="_blank" rel="noopener" class="btn btn-primary" style="margin-top:12px;"><i data-lucide="external-link" class="btn-icon"></i> Verify Credential</a>` : ''}
     `;
     
+    modal.classList.add('active');
+    refreshIcons();
+  }
+
+  /* ── Resume Modal & Viewer ─────────────────────────────────── */
+  function openResumeModal() {
+    const modal = document.getElementById('resumeModal');
+    const body = document.getElementById('resumeModalBody');
+    if (!modal || !body) return;
+
+    const p = data.profile || {};
+    const exp = data.experience || [];
+    const edu = data.education || [];
+    const certs = data.certificates || [];
+    const skills = data.skills || [];
+    const projects = data.projects || [];
+    const hasCustomUrl = !!(p.resumeUrl && p.resumeUrl.trim());
+
+    body.innerHTML = `
+      <div class="resume-preview-header">
+        <div>
+          <h3 style="font-size:1.3rem;font-weight:800;color:var(--text-primary);">Curriculum Vitae / Resume</h3>
+          <p style="font-size:0.85rem;color:var(--text-muted);">${esc(p.name)} — ${esc(p.title)}</p>
+        </div>
+        <div class="resume-preview-actions">
+          <button class="btn btn-primary" onclick="window.print()"><i data-lucide="printer" class="btn-icon"></i> Print / Save as PDF</button>
+          ${hasCustomUrl ? `<a href="${p.resumeUrl}" target="_blank" rel="noopener" class="btn btn-secondary"><i data-lucide="external-link" class="btn-icon"></i> External Link</a>` : ''}
+        </div>
+      </div>
+
+      <div class="resume-sheet" id="printableResumeArea">
+        <div class="resume-sheet-header">
+          <h1 class="resume-sheet-name">${esc(p.name)}</h1>
+          <div class="resume-sheet-title">${esc(p.title)} ${p.company ? `• ${esc(p.company)}` : ''}</div>
+          <div class="resume-sheet-contact">
+            ${p.email ? `<span><i data-lucide="mail" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px;"></i>${esc(p.email)}</span>` : ''}
+            ${p.phone ? `<span><i data-lucide="phone" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px;"></i>${esc(p.phone)}</span>` : ''}
+            ${p.location ? `<span><i data-lucide="map-pin" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px;"></i>${esc(p.location)}</span>` : ''}
+          </div>
+        </div>
+
+        ${p.bio || (data.about && data.about.introduction) ? `
+          <div class="resume-sheet-section">
+            <h2 class="resume-sheet-heading">Professional Summary</h2>
+            <p class="resume-sheet-item-desc">${esc(p.bio || data.about.introduction)}</p>
+          </div>
+        ` : ''}
+
+        ${exp.length > 0 ? `
+          <div class="resume-sheet-section">
+            <h2 class="resume-sheet-heading">Experience</h2>
+            ${exp.map(e => `
+              <div class="resume-sheet-item">
+                <div class="resume-sheet-item-header">
+                  <span>${esc(e.position)}</span>
+                  <span>${esc(e.startDate)} — ${esc(e.endDate)}</span>
+                </div>
+                <div class="resume-sheet-item-sub">${esc(e.organization)} ${e.location ? `• ${esc(e.location)}` : ''}</div>
+                <p class="resume-sheet-item-desc">${esc(e.description)}</p>
+                ${e.technologies && e.technologies.length ? `
+                  <div class="resume-sheet-tags">
+                    ${e.technologies.map(t => `<span class="resume-sheet-tag">${esc(t)}</span>`).join('')}
+                  </div>
+                ` : ''}
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+
+        ${edu.length > 0 ? `
+          <div class="resume-sheet-section">
+            <h2 class="resume-sheet-heading">Education</h2>
+            ${edu.map(e => `
+              <div class="resume-sheet-item">
+                <div class="resume-sheet-item-header">
+                  <span>${esc(e.institution)}</span>
+                  <span>${esc(e.startYear)} — ${esc(e.endYear)}</span>
+                </div>
+                <div class="resume-sheet-item-sub">${esc(e.degree)} ${e.department ? `in ${esc(e.department)}` : ''}</div>
+                <p class="resume-sheet-item-desc">${esc(e.description)}</p>
+                ${e.grade ? `<div style="font-size:0.85rem;color:var(--accent-secondary);margin-top:2px;">Grade: ${esc(e.grade)}</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+
+        ${skills.length > 0 ? `
+          <div class="resume-sheet-section">
+            <h2 class="resume-sheet-heading">Skills & Technical Proficiencies</h2>
+            <div class="resume-sheet-tags">
+              ${skills.map(s => `<span class="resume-sheet-tag" style="padding:4px 10px;font-size:0.85rem;">${esc(s.name)} (${s.percentage}%)</span>`).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        ${projects.length > 0 ? `
+          <div class="resume-sheet-section">
+            <h2 class="resume-sheet-heading">Key Projects</h2>
+            ${projects.slice(0, 3).map(pr => `
+              <div class="resume-sheet-item">
+                <div class="resume-sheet-item-header">
+                  <span>${esc(pr.title)}</span>
+                  <span>${esc(pr.category || '')}</span>
+                </div>
+                <p class="resume-sheet-item-desc">${esc(pr.description)}</p>
+                ${pr.technologies && pr.technologies.length ? `
+                  <div class="resume-sheet-tags">
+                    ${pr.technologies.map(t => `<span class="resume-sheet-tag">${esc(t)}</span>`).join('')}
+                  </div>
+                ` : ''}
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+
+        ${certs.length > 0 ? `
+          <div class="resume-sheet-section">
+            <h2 class="resume-sheet-heading">Certifications</h2>
+            ${certs.map(c => `
+              <div class="resume-sheet-item" style="margin-bottom:8px;">
+                <div class="resume-sheet-item-header">
+                  <span>${esc(c.name)}</span>
+                  <span>${esc(c.date)}</span>
+                </div>
+                <div class="resume-sheet-item-sub">${esc(c.organization)} ${c.credentialId ? `(ID: ${esc(c.credentialId)})` : ''}</div>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `;
+
     modal.classList.add('active');
     refreshIcons();
   }
@@ -498,9 +650,23 @@
     if (certModalClose) {
       certModalClose.addEventListener('click', () => certModal.classList.remove('active'));
     }
-    certModal.addEventListener('click', (e) => {
-      if (e.target === certModal) certModal.classList.remove('active');
-    });
+    if (certModal) {
+      certModal.addEventListener('click', (e) => {
+        if (e.target === certModal) certModal.classList.remove('active');
+      });
+    }
+
+    // Resume modal close
+    const resumeModalClose = document.getElementById('resumeModalClose');
+    const resumeModal = document.getElementById('resumeModal');
+    if (resumeModalClose) {
+      resumeModalClose.addEventListener('click', () => resumeModal.classList.remove('active'));
+    }
+    if (resumeModal) {
+      resumeModal.addEventListener('click', (e) => {
+        if (e.target === resumeModal) resumeModal.classList.remove('active');
+      });
+    }
 
     // Skills filter
     document.getElementById('skillsFilter').addEventListener('click', (e) => {
@@ -701,6 +867,16 @@
   function setText(id, text) {
     const el = document.getElementById(id);
     if (el) el.textContent = text || '';
+  }
+
+  function esc(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function showToast(message, type = 'info') {

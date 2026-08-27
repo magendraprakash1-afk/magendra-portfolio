@@ -439,10 +439,22 @@
   <!-- ═══════ CERTIFICATE MODAL ═══════ -->
   <div class="modal-overlay" id="certModal">
     <div class="modal glass-card">
-      <button class="modal-close" id="certModalClose">
+      <button class="modal-close" id="certModalClose" aria-label="Close modal">
         <i data-lucide="x"></i>
       </button>
       <div class="modal-body" id="certModalBody">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ RESUME PREVIEW & DOWNLOAD MODAL ═══════ -->
+  <div class="modal-overlay" id="resumeModal">
+    <div class="modal glass-card resume-modal-dialog">
+      <button class="modal-close" id="resumeModalClose" aria-label="Close resume preview">
+        <i data-lucide="x"></i>
+      </button>
+      <div class="modal-body" id="resumeModalBody">
         <!-- Populated by JS -->
       </div>
     </div>
